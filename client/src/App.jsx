@@ -4,6 +4,7 @@ import { fetchNearbyCafes, fetchFavorites, saveFavorite, deleteFavorite } from "
 import SearchBar from "./components/SearchBar.jsx";
 import CafeList from "./components/CafeList.jsx";
 import FavoritesList from "./components/FavoritesList.jsx";
+import CafeMap from "./components/CafeMap.jsx";
 import "./index.css";
 
 export default function App() {
@@ -16,7 +17,7 @@ export default function App() {
 
   const [favorites, setFavorites] = useState([]);
   const [view, setView] = useState("search"); // "search" | "favorites"
-
+  const [selectedCafe, setSelectedCafe] = useState(null);
   const favoriteIds = useMemo(() => new Set(favorites.map((f) => f.placeId)), [favorites]);
 
   // Load saved favorites once on mount.
@@ -75,45 +76,68 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1>☕ Cafe Finder</h1>
+        <div className="app__brand">
+          <span className="app__brand-icon">☕</span>
+          <div>
+            <h1>CafeMaps</h1>
+            <p>Discover cafes near you</p>
+          </div>
+        </div>
         <nav className="app__nav">
           <button
-            className={view === "search" ? "tab tab--active" : "tab"}
+            className={`tab ${view === "search" ? "tab--active" : ""}`}
             onClick={() => setView("search")}
           >
-            Search
+            Explore
           </button>
           <button
-            className={view === "favorites" ? "tab tab--active" : "tab"}
+            className={`tab ${view === "favorites" ? "tab--active" : ""}`}
             onClick={() => setView("favorites")}
           >
-            Favorites ({favorites.length})
+            Saved ({favorites.length})
           </button>
         </nav>
       </header>
 
-      <main className="app__main">
-        {view === "search" ? (
-          <>
-            <SearchBar
-              onFindNearby={requestLocation}
-              loading={locating}
-              radius={radius}
-              onRadiusChange={setRadius}
-            />
-            {locationError && <p className="status-message status-message--error">{locationError}</p>}
-            <CafeList
-              cafes={cafes}
-              loading={cafesLoading}
-              error={cafesError}
-              favoriteIds={favoriteIds}
-              onToggleSave={handleToggleSave}
-            />
-          </>
-        ) : (
+      {view === "search" ? (
+        <>
+          <SearchBar
+            onFindNearby={requestLocation}
+            loading={locating}
+            radius={radius}
+            onRadiusChange={setRadius}
+          />
+          {locationError && (
+            <p className="status-message status-message--error">{locationError}</p>
+          )}
+          <div className="app__main">
+            <div className="app__list-panel">
+              <CafeList
+                cafes={cafes}
+                loading={cafesLoading}
+                error={cafesError}
+                radius={radius}
+                favoriteIds={favoriteIds}
+                selectedCafeId={selectedCafe?.placeId}
+                onToggleSave={handleToggleSave}
+                onSelectCafe={setSelectedCafe}
+              />
+            </div>
+            <div className="app__map-panel">
+              <CafeMap
+                userLocation={location}
+                cafes={cafes}
+                selectedCafe={selectedCafe}
+                onSelectCafe={setSelectedCafe}
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="favorites-panel">
           <FavoritesList favorites={favorites} onRemove={handleRemoveFavorite} />
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }

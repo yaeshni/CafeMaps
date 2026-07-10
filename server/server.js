@@ -6,6 +6,7 @@ import { connectDB } from "./config/db.js";
 import placesRoutes from "./routes/places.js";
 import favoritesRoutes from "./routes/favorites.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
+import photosRoutes from "./routes/photos.js";
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use("/api/favorites", favoritesRoutes);
 // --- 404 + error handling (must be last) ---
 app.use(notFound);
 app.use(errorHandler);
+app.use("/api/photos", photosRoutes);
 
 // --- Startup ---
 async function start() {

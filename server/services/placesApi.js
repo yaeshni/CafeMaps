@@ -22,6 +22,8 @@ const NEARBY_FIELD_MASK = [
   "places.currentOpeningHours.openNow",
   "places.priceLevel",
   "places.photos.name",
+  "places.primaryType",
+  "places.types",
 ].join(",");
 
 const DETAILS_FIELD_MASK = [
@@ -47,11 +49,6 @@ class PlacesApiError extends Error {
   }
 }
 
-/**
- * Searches for cafes within a radius of a lat/lng point.
- * @param {{ lat: number, lng: number, radius: number }} params
- * @returns {Promise<Array>} simplified list of cafe objects
- */
 export async function searchNearbyCafes({ lat, lng, radius = 1500 }) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -59,7 +56,8 @@ export async function searchNearbyCafes({ lat, lng, radius = 1500 }) {
   }
 
   const body = {
-    includedTypes: ["cafe"],
+    includedPrimaryTypes: ["cafe"],
+    excludedTypes: ["restaurant", "fast_food_restaurant", "meal_takeaway"],
     maxResultCount: 20,
     locationRestriction: {
       circle: {
@@ -88,15 +86,27 @@ export async function searchNearbyCafes({ lat, lng, radius = 1500 }) {
   }
 
   const data = await response.json();
-  const places = data.places || [];
+  const places = (data.places || [])
+    .filter((place) => {
+      console.log(place.displayName?.text, "| primaryType:", place.primaryType, "| types:", place.types);
+      return isActualCafe(place);
+    })
+    .map((place) => {
+      const summary = formatCafeSummary(place);
+      const distanceMeters = getDistanceMeters(
+        lat,
+        lng,
+        place.location.latitude,
+        place.location.longitude
+      );
+      return { ...summary, distanceMeters: Math.round(distanceMeters) };
+    })
+    .filter((cafe) => cafe.distanceMeters <= radius)
+    .sort((a, b) => a.distanceMeters - b.distanceMeters);
 
-  return places.map(formatCafeSummary);
+  return places;
 }
 
-/**
- * Gets full details for a single place by its Google place ID.
- * @param {string} placeId
- */
 export async function getCafeDetails(placeId) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -123,10 +133,38 @@ export async function getCafeDetails(placeId) {
   return formatCafeDetails(place);
 }
 
+function getDistanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isActualCafe(place) {
+  const primary = place.primaryType;
+  const types = place.types || [];
+
+  const excluded = new Set([
+    "restaurant",
+    "meal_takeaway",
+    "fast_food_restaurant",
+    "bar",
+    "night_club",
+  ]);
+
+  if (primary && excluded.has(primary)) return false;
+  if (primary === "cafe") return true;
+
+  return types.includes("cafe") && !types.some((t) => excluded.has(t));
+}
+
 function buildPhotoUrl(photoName, maxWidthPx = 400) {
   if (!photoName) return null;
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  return `${PLACES_BASE_URL}/${photoName}/media?maxWidthPx=${maxWidthPx}&key=${apiKey}`;
+  return `/api/photos?name=${encodeURIComponent(photoName)}&maxWidth=${maxWidthPx}`;
 }
 
 function formatCafeSummary(place) {
