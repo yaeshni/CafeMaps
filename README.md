@@ -90,7 +90,7 @@ cafe-finder/
 
 ### 2. Clone and configure
 ```bash
-git clone https://github.com/<your-username>/cafeMaps.git
+git clone https://github.com/<yaeshni>/cafeMaps.git
 cd cafeMaps
 ```
 
