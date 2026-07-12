@@ -2,7 +2,7 @@
 
 A full-stack web app that discovers nearby cafes in real time using the Google Places API, displays them on an interactive map with rating badges, and lets you save favorites — persisted in MongoDB.
 
-**Live demo:** _[add your deployed link here once live]_
+
 
 ---
 
