@@ -1,5 +1,25 @@
 import { useState } from "react";
-import { Star } from "lucide-react";
+import { Star, Coffee, Cookie, Croissant, CupSoda } from "lucide-react";
+
+const GRADIENTS = [
+  ["#8b5e3c", "#c8935f"],
+  ["#6b4226", "#a4714f"],
+  ["#7a4a2e", "#d9a441"],
+  ["#5c3a21", "#b57b4f"],
+  ["#4e3527", "#9c6b46"],
+];
+
+const ICONS = [Coffee, Cookie, Croissant, CupSoda];
+
+// Hashes the cafe name into a stable number, so the same cafe always
+// gets the same gradient + icon combo, instead of changing on every render.
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
 
 export default function CafeCard({ cafe, isSaved, isSelected, onToggleSave, onSelect }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -8,6 +28,11 @@ export default function CafeCard({ cafe, isSaved, isSelected, onToggleSave, onSe
     ? `${(import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace("/api", "")}${cafe.photoUrl}`
     : cafe.photoUrl;
 
+  const hasRealPhoto = cafe.photoUrl && !imgFailed;
+  const hash = hashString(cafe.name);
+  const [colorStart, colorEnd] = GRADIENTS[hash % GRADIENTS.length];
+  const Icon = ICONS[hash % ICONS.length];
+
   return (
     <article
       onClick={() => onSelect?.(cafe)}
@@ -15,8 +40,11 @@ export default function CafeCard({ cafe, isSaved, isSelected, onToggleSave, onSe
         isSelected ? "border-primary ring-4 ring-primary/15" : "border-transparent"
       }`}
     >
-      <div className="h-[100px] w-[100px] flex-shrink-0 bg-gradient-to-br from-[#d4a574] to-primary">
-        {cafe.photoUrl && !imgFailed ? (
+      <div
+        className="relative flex h-[100px] w-[100px] flex-shrink-0 items-center justify-center overflow-hidden"
+        style={!hasRealPhoto ? { background: `linear-gradient(135deg, ${colorStart}, ${colorEnd})` } : undefined}
+      >
+        {hasRealPhoto ? (
           <img
             src={photoSrc}
             alt={cafe.name}
@@ -26,7 +54,12 @@ export default function CafeCard({ cafe, isSaved, isSelected, onToggleSave, onSe
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl opacity-70">☕</div>
+          <>
+            <Icon className="h-8 w-8 text-white/90" strokeWidth={1.5} />
+            <span className="absolute bottom-1.5 right-2 text-[1.1rem] font-bold text-white/25">
+              {cafe.name.trim().charAt(0).toUpperCase()}
+            </span>
+          </>
         )}
       </div>
 

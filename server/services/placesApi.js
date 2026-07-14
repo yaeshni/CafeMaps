@@ -87,10 +87,7 @@ export async function searchNearbyCafes({ lat, lng, radius = 1500 }) {
 
   const data = await response.json();
   const places = (data.places || [])
-    .filter((place) => {
-      console.log(place.displayName?.text, "| primaryType:", place.primaryType, "| types:", place.types);
-      return isActualCafe(place);
-    })
+    .filter(isActualCafe)
     .map((place) => {
       const summary = formatCafeSummary(place);
       const distanceMeters = getDistanceMeters(
